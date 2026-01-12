@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水墨山河·古风数据大屏</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/map/js/china.js"></script>
+    <style>
+        /* --- 字体引入：尝试使用网络字体增强书法感 (如果没有网络则回退到楷体) --- */
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
+
+        :root {
+            --paper-bg: #fdfbf2;     /* 宣纸白 */
+            --ink-dark: #1a1a1a;     /* 浓墨 */
+            --ink-light: #595959;    /* 淡墨 */
+            --cyan: #5c7a75;         /* 石青 */
+            --gold: #b59859;         /* 泥金 */
+            --red: #943e3e;          /* 硃砂 */
+            --border-color: rgba(92, 122, 117, 0.3);
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Ma Shan Zheng', 'KaiTi', 'STKaiti', serif; /* 优先书法字体 */
+        }
+
+        body {
+            background-color: #0f1215;
+            color: var(--gold);
+            overflow: hidden;
+            width: 100vw; height: 100vh;
+        }
+
+        /* --- 1. 背景层优化：水墨山水画卷感 --- */
+        .bg-layer {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1;
+            /* 宣纸纹理混合 */
+            background: 
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E"),
+                linear-gradient(180deg, #182025 0%, #243238 60%, #182025 100%);
+        }
+
+        /* 远山剪影 (使用CSS渐变模拟水墨山峦) */
+        .mountain-bg {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 40%;
+            background: linear-gradient(to top, #0f1215 0%, rgba(30, 45, 50, 0.8) 50%, transparent 100%);
+            clip-path: polygon(0% 100%, 0% 40%, 15% 60%, 30% 30%, 50% 55%, 70% 25%, 85% 50%, 100% 30%, 100% 100%);
+            opacity: 0.4;
+            filter: blur(3px);
+            z-index: -1;
+        }
+        /* .mountain-bg-2 {
+            height: 30%; bottom: 0; opacity: 0.6;
+            clip-path: polygon(0% 100%, 10% 40%, 25% 60%, 40% 30%, 60% 70%, 80% 40%, 100% 60%, 100% 100%);
+            background: linear-gradient(to top, #0f1215 0%, rgba(45, 65, 70, 0.9) 100%);
+            filter: blur(1px);
+            z-index: -1;
+        } */
+
+        /* 云雾动画 */
+        .fog {
+            position: absolute; width: 200%; height: 100%;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(200,200,200,0.05) 40%, transparent 70%);
+            animation: moveFog 60s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+        @keyframes moveFog { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+
+        /* --- 2. 布局结构 --- */
+        .container {
+            display: flex; flex-direction: column; height: 100%; padding: 10px 20px 20px; position: relative; z-index: 1;
+        }
+
+        .header {
+            height: 80px; text-align: center; position: relative; margin-bottom: 10px;
+        }
+
+        /* 书法标题 */
+        .main-title {
+            font-size: 3.5rem; letter-spacing: 0.5rem;
+            background: linear-gradient(to bottom, #ebdcb0 30%, #8c7335 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            position: relative; z-index: 2;
+        }
+        /* 标题两侧的装饰线 */
+        .header::before, .header::after {
+            content: ''; position: absolute; top: 50%; width: 30%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.3;
+        }
+        .header::before { left: 0; } .header::after { right: 0; }
+
+        .content {
+            flex: 1; display: flex; gap: 20px; overflow: hidden;
+        }
+
+        /* 左中右三栏布局 */
+        .column { display: flex; flex-direction: column; gap: 20px; }
+        .col-left { flex: 3; }
+        .col-center { flex: 5; position: relative; }
+        .col-right { flex: 3; }
+
+        /* --- 3. 容器组件：画卷/窗棂风格 --- */
+        .panel {
+            flex: 1; min-height: 0; /* 允许flex子项收缩 */
+            background: rgba(22, 28, 32, 0.6);
+            border: 1px solid rgba(181, 152, 89, 0.2);
+            position: relative;
+            padding: 40px 15px 15px; /* 顶部留给标题 */
+            /* 倒角装饰 */
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        /* 边角花纹 (使用CSS绘制简易回纹) */
+        .panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: 
+                linear-gradient(135deg, var(--gold) 2px, transparent 2px) top left,
+                linear-gradient(225deg, var(--gold) 2px, transparent 2px) top right,
+                linear-gradient(45deg, var(--gold) 2px, transparent 2px) bottom left,
+                linear-gradient(315deg, var(--gold) 2px, transparent 2px) bottom right;
+            background-size: 15px 15px;
+            background-repeat: no-repeat;
+            opacity: 0.6;
+        }
+
+        /* 面板标题 - 竖幅签条风格 */
+        .panel-title {
+            position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+            background: #2a3a40;
+            border: 1px solid var(--gold);
+            border-top: none;
+            padding: 5px 25px;
+            color: var(--paper-bg);
+            font-size: 1.2rem;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        /* 标题两侧的小装饰 */
+        .panel-title::before, .panel-title::after {
+            content: '•'; color: var(--red); margin: 0 5px;
+        }
+
+        /* 图表区域 */
+        .chart-box { width: 100%; height: 100%; }
+
+        /* 地图容器特殊样式 */
+        .map-wrapper {
+            width: 100%; height: 100%; position: relative;
+        }
+        /* 地图底部的旋转光环 -> 改为静谧的八卦/罗盘纹理 */
+        .map-bg {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; height: 90%;
+            border: 1px dashed rgba(92, 122, 117, 0.2);
+            border-radius: 50%;
+            animation: rotateSlow 100s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes rotateSlow { from {transform: translate(-50%, -50%) rotate(0deg);} to {transform: translate(-50%, -50%) rotate(360deg);} }
+
+    </style>
+</head>
+<body>
+    <div class="bg-layer"></div>
+    <div class="mountain-bg"></div>
+    <!-- <div class="mountain-bg-2"></div> -->
+    <div class="fog"></div>
+
+    <div class="container">
+        <header class="header">
+            <h1 class="main-title">九州风物志</h1>
+        </header>
+
+        <div class="content">
+            <div class="column col-left">
+                <div class="panel">
+                    <div class="panel-title">十二时辰·人流</div>
+                    <div id="chartBar" class="chart-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">五行·产业分布</div>
+                    <div id="chartRing" class="chart-box"></div>
+                </div>
+            </div>
+
+            <div class="column col-center">
+                <div class="map-wrapper">
+                    <div class="map-bg"></div>
+                    <div id="chinaMap" class="chart-box"></div>
+                </div>
+            </div>
+
+            <div class="column col-right">
+                <div class="panel">
+                    <div class="panel-title">七日·气运走势</div>
+                    <div id="chartLine" class="chart-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">六艺·能力图谱</div>
+                    <div id="chartPie" class="chart-box"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 定义传统色板
+            const colors = {
+                gold: '#e0c899',
+                cyan: '#3a6960',
+                red: '#9e2a2b',
+                ink: '#1a1e24',
+                text: '#d4e0e0'
+            };
+            
+            // 通用配置：字体和Tooltip样式
+            const commonTooltip = {
+                trigger: 'axis',
+                backgroundColor: 'rgba(250, 248, 240, 0.95)', // 仿宣纸
+                borderColor: '#9e2a2b', // 朱砂红框
+                borderWidth: 1,
+                padding: [10, 15],
+                textStyle: {
+                    color: '#333',
+                    fontFamily: "'Ma Shan Zheng', 'KaiTi'",
+                    fontSize: 16
+                },
+                // 使用阴影模拟纸张浮起
+                extraCssText: 'box-shadow: 5px 5px 15px rgba(0,0,0,0.3); border-radius: 2px;'
+            };
+
+            // 1. 柱状图：竹节风格
+            const chartBar = echarts.init(document.getElementById('chartBar'));
+            const barOption = {
+                tooltip: { ...commonTooltip, trigger: 'axis' },
+                grid: { top: '15%', bottom: '10%', left: '12%', right: '5%' },
+                xAxis: {
+                    data: ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'],
+                    axisLine: { lineStyle: { color: colors.cyan, opacity: 0.5 } },
+                    axisLabel: { color: colors.gold, fontFamily: 'KaiTi' },
+                    axisTick: { alignWithLabel: true, lineStyle: { color: colors.cyan } }
+                },
+                yAxis: {
+                    splitLine: { lineStyle: { type: 'dashed', color: 'rgba(58, 105, 96, 0.2)' } },
+                    axisLabel: { color: colors.text, fontFamily: 'KaiTi' }
+                },
+                series: [{
+                    type: 'bar',
+                    barWidth: '40%',
+                    itemStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: '#d4af37' },
+                            { offset: 1, color: 'rgba(212, 175, 55, 0.1)' }
+                        ]),
+                        borderRadius: [3, 3, 0, 0]
+                    },
+                    // 模拟竹节纹理（使用markPoint或label太复杂，这里用简单的渐变）
+                    data: [120, 200, 150, 80, 70, 110, 130, 160, 200, 180, 140, 90]
+                }]
+            };
+            chartBar.setOption(barOption);
+
+            // 2. 环形图：玉珏
+            const chartRing = echarts.init(document.getElementById('chartRing'));
+            const ringOption = {
+                tooltip: { ...commonTooltip, trigger: 'item' },
+                legend: {
+                    top: 'center', right: '0', orient: 'vertical',
+                    textStyle: { color: colors.gold, fontFamily: 'KaiTi' },
+                    itemGap: 10,
+                    icon: 'circle' // 使用圆形图例
+                },
+                series: [{
+                    type: 'pie',
+                    radius: ['50%', '70%'],
+                    center: ['35%', '50%'],
+                    itemStyle: { borderColor: '#161c20', borderWidth: 2 },
+                    label: { show: false },
+                    data: [
+                        { value: 1048, name: '金', itemStyle: { color: '#f2be45' } },
+                        { value: 735, name: '木', itemStyle: { color: '#45b787' } },
+                        { value: 580, name: '水', itemStyle: { color: '#1f5a8a' } },
+                        { value: 484, name: '火', itemStyle: { color: '#bc3e4d' } },
+                        { value: 300, name: '土', itemStyle: { color: '#b36d61' } }
+                    ]
+                }]
+            };
+            chartRing.setOption(ringOption);
+
+            // 3. 折线图：山峦
+            const chartLine = echarts.init(document.getElementById('chartLine'));
+            const lineOption = {
+                tooltip: { ...commonTooltip },
+                grid: { top: '15%', bottom: '10%', left: '12%', right: '5%' },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: ['初一', '初二', '初三', '初四', '初五', '初六', '初七'],
+                    axisLine: { lineStyle: { color: colors.cyan, opacity: 0.5 } },
+                    axisLabel: { color: colors.gold, fontFamily: 'KaiTi' }
+                },
+                yAxis: {
+                    splitLine: { lineStyle: { color: 'rgba(58, 105, 96, 0.1)' } },
+                    axisLabel: { color: colors.text, fontFamily: 'KaiTi' }
+                },
+                series: [
+                    {
+                        name: '气运', type: 'line', smooth: true,
+                        lineStyle: { width: 2, color: '#45b787' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(69, 183, 135, 0.4)' },
+                                { offset: 1, color: 'rgba(69, 183, 135, 0)' }
+                            ])
+                        },
+                        symbol: 'none',
+                        data: [120, 132, 101, 134, 90, 230, 210]
+                    },
+                    {
+                        name: '人脉', type: 'line', smooth: true,
+                        lineStyle: { width: 2, color: '#1f5a8a' },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(31, 90, 138, 0.4)' },
+                                { offset: 1, color: 'rgba(31, 90, 138, 0)' }
+                            ])
+                        },
+                        symbol: 'none',
+                        data: [220, 182, 191, 234, 290, 330, 310]
+                    }
+                ]
+            };
+            chartLine.setOption(lineOption);
+
+            // 4. 玫瑰图：折扇
+            const chartPie = echarts.init(document.getElementById('chartPie'));
+            const pieOption = {
+                tooltip: { ...commonTooltip, trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: [20, 80],
+                    center: ['50%', '50%'],
+                    roseType: 'area',
+                    itemStyle: { borderRadius: 4, borderColor: '#161c20', borderWidth: 1 },
+                    label: { color: colors.gold, fontFamily: 'KaiTi' },
+                    data: [
+                        { value: 40, name: '礼', itemStyle: { color: '#f2be45' } },
+                        { value: 38, name: '乐', itemStyle: { color: '#45b787' } },
+                        { value: 32, name: '射', itemStyle: { color: '#b36d61' } },
+                        { value: 30, name: '御', itemStyle: { color: '#1f5a8a' } },
+                        { value: 28, name: '书', itemStyle: { color: '#bc3e4d' } },
+                        { value: 26, name: '数', itemStyle: { color: '#e0eee8' } }
+                    ]
+                }]
+            };
+            chartPie.setOption(pieOption);
+
+            // 5. 地图：青绿山水
+            const chartMap = echarts.init(document.getElementById('chinaMap'));
+            
+            fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+                .then(res => res.json())
+                .then(data => {
+                    echarts.registerMap('china', data);
+                    chartMap.setOption({
+                        tooltip: { ...commonTooltip, trigger: 'item', formatter: '{b}<br/>数值：{c}' },
+                        geo: {
+                            map: 'china',
+                            roam: true,
+                            zoom: 1.2,
+                            label: { show: true, color: '#1f5a8a', fontFamily: 'Ma Shan Zheng' }, // 地图文字颜色
+                            itemStyle: {
+                                areaColor: '#e0eee8', // 浅青色底
+                                borderColor: '#5c7a75', // 黛绿边框
+                                borderWidth: 1,
+                                shadowColor: 'rgba(0,0,0,0.4)',
+                                shadowBlur: 10,
+                                shadowOffsetY: 5
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    areaColor: '#b59859', // 金色高亮
+                                    borderColor: '#9e2a2b',
+                                    borderWidth: 2
+                                },
+                                label: { color: '#9e2a2b' }
+                            }
+                        },
+                        series: [{
+                            type: 'map',
+                            geoIndex: 0,
+                            data: [
+                                {name: '北京', value: 1000}, {name: '四川', value: 580},
+                                {name: '上海', value: 950}, {name: '广东', value: 720},
+                                {name: '浙江', value: 680}, {name: '福建', value: 550}
+                            ]
+                        }]
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('chinaMap').innerHTML = '<div style="color:#b59859;text-align:center;padding-top:20%;font-size:24px;">画卷徐徐展开中...</div>';
+                });
+
+            // 窗口自适应
+            window.addEventListener('resize', () => {
+                chartBar.resize();
+                chartRing.resize();
+                chartLine.resize();
+                chartPie.resize();
+                chartMap.resize();
+            });
+        });
+    </script>
+</body>
+</html>

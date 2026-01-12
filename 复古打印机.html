@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大白の加密系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --vintage-gold: #c5a059;
+            --parchment: #e8d5b5;
+            --machine-case: #3a352f;
+            --accent-red: #a32a2a;
+            --bg-dark: #12100e;
+            --stamp-red: rgba(163, 42, 42, 0.75);
+            /* 羊皮纸纹理 */
+            --parchment-texture: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0) 100%),
+            url('https://www.transparenttextures.com/patterns/papyrus-dark.png');
+        }
+
+        /* 复古滚动条样式优化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2a2621;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #5d5142;
+            border: 2px solid #2a2621;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--vintage-gold);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            /* 全局改为楷体 */
+            font-family: "Kaiti", "STKaiti", "华文楷体", "楷体", serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #d1c1a8;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--vintage-gold);
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            color: var(--vintage-gold);
+            letter-spacing: 12px;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 30px;
+        }
+
+        /* 打字机外壳 */
+        .typewriter-section {
+            background-color: var(--machine-case);
+            border-radius: 12px 12px 60px 60px;
+            padding: 25px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), inset 0 2px 3px rgba(255, 255, 255, 0.05);
+            border: 3px solid #25221e;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .typewriter-screen {
+            background: #0d0e0d;
+            border: 10px solid #221f1c;
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 15px #000;
+        }
+
+        /* 预览区域纸张 */
+        .paper {
+            background-color: #dcc7a1;
+            background-image: var(--parchment-texture);
+            height: 220px;
+            padding: 20px;
+            color: #2c2416;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            overflow-y: auto;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        /* 输入框改为复古质感 */
+        textarea {
+            width: 100%;
+            height: 130px;
+            background: #1a1815;
+            border: 1px solid #4d4335;
+            color: #a6937c;
+            padding: 15px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            resize: none;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--vintage-gold);
+            box-shadow: 0 0 5px rgba(197, 160, 89, 0.3);
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            padding: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.3s;
+            box-shadow: 0 4px 0 #1a1815;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1a1815;
+        }
+
+        .btn-preview {
+            background: #4a453f;
+            color: #d1c1a8;
+        }
+
+        .btn-generate {
+            background: var(--vintage-gold);
+            color: #1a1815;
+        }
+
+        /* 胡桃木桌面区域 */
+        .cards-section {
+            background-color: #2e1f13;
+            background-image: url('https://www.transparenttextures.com/patterns/dark-wood.png');
+            border-radius: 8px;
+            position: relative;
+            min-height: 800px;
+            border: 12px solid #1e140d;
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+        }
+
+        /* 羊皮纸卡片样式 */
+        .card {
+            width: 320px;
+            background: #e6d2b1;
+            background-image: var(--parchment-texture);
+            padding: 30px;
+            position: absolute;
+            cursor: grab;
+            box-shadow: 10px 15px 30px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            /* 羊皮纸不规则边缘感 */
+            border-radius: 2px 4px 2px 5px;
+/* 核心代码：模拟底部的撕裂感 */
+            clip-path: polygon(
+                    0% 0%, 100% 0%,
+                    100% 90%,
+                    97.5% 93%, 95% 89%, 92.5% 94%, 90% 90%,
+                    87.5% 93%, 85% 89%, 82.5% 94%, 80% 90%,
+                    77.5% 93%, 75% 89%, 72.5% 94%, 70% 90%,
+                    67.5% 93%, 65% 89%, 62.5% 94%, 60% 90%,
+                    57.5% 93%, 55% 89%, 52.5% 94%, 50% 90%,
+                    47.5% 93%, 45% 89%, 42.5% 94%, 40% 90%,
+                    37.5% 93%, 35% 89%, 32.5% 94%, 30% 90%,
+                    27.5% 93%, 25% 89%, 22.5% 94%, 20% 90%,
+                    17.5% 93%, 15% 89%, 12.5% 94%, 10% 90%,
+                    7.5% 93%, 5% 89%, 2.5% 94%, 0% 90%
+            );
+        }
+
+        .card-header {
+            font-size: 0.85rem;
+            color: #7d6b53;
+            border-bottom: 1px solid rgba(125, 107, 83, 0.3);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .card-content {
+            color: #3e3221;
+            font-size: 1.25rem;
+            line-height: 1.6;
+            min-height: 140px;
+            white-space: pre-wrap;
+        }
+
+        /* 印章 */
+        .stamp {
+            position: absolute;
+            border: 3px double var(--stamp-red);
+            color: var(--stamp-red);
+            padding: 4px 12px;
+            font-weight: 900;
+            font-size: 2rem;
+            transform: rotate(-20deg);
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(163, 42, 42, 0.05);
+        }
+
+        .card-tools {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding-top: 12px;
+        }
+
+        .tool-btn {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            box-shadow: none;
+            color: #5d5142;
+        }
+
+        .tool-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .status-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .light {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #222;
+        }
+
+        .light.active {
+            background: #00ff00;
+            box-shadow: 0 0 8px #00ff00;
+        }
+
+        .light.typing {
+            background: #ff3300;
+            box-shadow: 0 0 8px #ff3300;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>大白の加密系统</h1>
+    </header>
+
+    <main class="main-content">
+        <section class="typewriter-section">
+            <div class="status-panel">
+                <div class="light active"></div>
+                <div class="light" id="typing-light"></div>
+                <span style="font-size: 0.8rem; color: #8b7d6b;">信道加密已开启</span>
+            </div>
+
+            <div class="typewriter-screen">
+                <div class="paper" id="paper-display"></div>
+            </div>
+
+            <textarea id="text-input" placeholder="请在此撰写秘密信函...">见字如晤：
+
+此函采用特级羊皮纸打印。
+内容加盖印章后，将视为绝密。
+阅后请双击纸面，执行焚毁程序。
+
+顺颂商祺。</textarea>
+
+            <div class="btn-group">
+                <button class="btn-preview" id="preview-btn"><i class="fas fa-feather"></i> 预览效果</button>
+                <button class="btn-generate" id="generate-btn"><i class="fas fa-stamp"></i> 生成信函</button>
+            </div>
+        </section>
+
+        <section class="cards-section" id="cards-container">
+<!--?            <div style="position: absolute; bottom: 30px; left: 30px; color: rgba(255,255,255,0.05); font-size: 4rem; pointer-events: none;">-->
+<!--?                胡桃木台面-->
+<!--?            </div>-->
+        </section>
+    </main>
+</div>
+
+<audio id="sound-key" src="https://cdn.pixabay.com/audio/2022/03/15/audio_14560f89d3.mp3"></audio>
+<audio id="sound-bell" src="https://www.soundjay.com/mechanical/typewriter-bell-1.mp3"></audio>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const textInput = document.getElementById('text-input');
+        const paperDisplay = document.getElementById('paper-display');
+        const previewBtn = document.getElementById('preview-btn');
+        const generateBtn = document.getElementById('generate-btn');
+        const cardsContainer = document.getElementById('cards-container');
+        const typingLight = document.getElementById('typing-light');
+
+        let isTyping = false;
+        let zIndexCounter = 100;
+
+        const playSound = (id) => {
+            const sound = document.getElementById(id);
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => {
+                });
+            }
+        };
+
+        async function typeEffect(text, targetElement, speed = 50) {
+            isTyping = true;
+            typingLight.classList.add('typing');
+            targetElement.innerHTML = '';
+
+            for (let char of text) {
+                if (!isTyping) break;
+                const span = document.createElement('span');
+                span.textContent = char;
+                targetElement.appendChild(span);
+                if (char !== ' ' && char !== '\n') playSound('sound-key');
+                targetElement.scrollTop = targetElement.scrollHeight;
+                await new Promise(r => setTimeout(r, speed));
+            }
+
+            if (isTyping) playSound('sound-bell');
+            isTyping = false;
+            typingLight.classList.remove('typing');
+        }
+
+        generateBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (!text) return;
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            const randomRot = (Math.random() - 0.5) * 10;
+
+            card.style.left = (Math.random() * (cardsContainer.offsetWidth - 340) + 20) + 'px';
+            card.style.top = (Math.random() * (cardsContainer.offsetHeight - 400) + 20) + 'px';
+            card.style.transform = `rotate(${randomRot}deg)`;
+            card.style.zIndex = zIndexCounter++;
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span>卷宗: №${Math.floor(Math.random()*8999 + 1000)}</span>
+                    <span>${new Date().toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric'})}</span>
+                </div>
+                <div class="card-content"></div>
+                <div class="stamp">机密</div>
+                <div class="card-tools">
+                    <button class="tool-btn stamp-trigger"><i class="fas fa-check-circle"></i> 盖章</button>
+                    <button class="tool-btn download-trigger"><i class="fas fa-file-image"></i> 存图</button>
+                </div>
+            `;
+
+            cardsContainer.appendChild(card);
+            makeDraggable(card);
+
+            // 双击焚毁
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.tagName === 'BUTTON') return;
+                card.style.transition = 'all 0.6s ease';
+                card.style.transform += ' scale(0.5) translateY(-50px)';
+                card.style.filter = 'brightness(2) blur(10px)';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 600);
+            });
+
+            // 盖章逻辑
+            card.querySelector('.stamp-trigger').addEventListener('click', function () {
+                const stamp = card.querySelector('.stamp');
+                stamp.style.opacity = '1';
+                stamp.style.top = (Math.random() * 60 + 50) + 'px';
+                stamp.style.right = (Math.random() * 30 + 20) + 'px';
+                this.disabled = true;
+                playSound('sound-bell');
+            });
+
+            // 存图逻辑
+            card.querySelector('.download-trigger').addEventListener('click', function () {
+                const tools = card.querySelector('.card-tools');
+                tools.style.visibility = 'hidden';
+                html2canvas(card, {
+                    backgroundColor: null,
+                    scale: 2,
+                    useCORS: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `绝密卷宗-${Date.now()}.png`;
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                    tools.style.visibility = 'visible';
+                });
+            });
+
+            typeEffect(text, card.querySelector('.card-content'), 40);
+        });
+
+        previewBtn.addEventListener('click', () => {
+            if (isTyping) {
+                isTyping = false;
+                return;
+            }
+            typeEffect(textInput.value, paperDisplay);
+        });
+
+        function makeDraggable(el) {
+            el.onmousedown = (e) => {
+                if (e.target.tagName === 'BUTTON') return;
+                el.style.zIndex = zIndexCounter++;
+                let shiftX = e.clientX - el.getBoundingClientRect().left;
+                let shiftY = e.clientY - el.getBoundingClientRect().top;
+
+                const moveAt = (pageX, pageY) => {
+                    let newX = pageX - cardsContainer.getBoundingClientRect().left - shiftX;
+                    let newY = pageY - cardsContainer.getBoundingClientRect().top - shiftY;
+                    el.style.left = newX + 'px';
+                    el.style.top = newY + 'px';
+                };
+
+                const onMouseMove = (e) => moveAt(e.clientX, e.clientY);
+                document.addEventListener('mousemove', onMouseMove);
+                document.onmouseup = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.onmouseup = null;
+                };
+            };
+            el.ondragstart = () => false;
+        }
+
+        typeEffect(textInput.value, paperDisplay, 40);
+    });
+</script>
+</body>
+</html>
